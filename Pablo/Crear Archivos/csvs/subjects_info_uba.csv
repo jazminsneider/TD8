@@ -1,0 +1,15 @@
+sessionID;idSpeakerA;genderSpeakerA;idSpeakerB;genderSpeakerB
+1;101;f;102;f
+2;103;m;104;f
+3;105;f;106;f
+4;107;m;108;m
+5;109;f;110;m
+6;104;f;102;f
+7;111;m;112;f
+8;110;m;113;m
+9;106;f;101;f
+10;108;m;105;f
+11;114;m;103;m
+12;113;m;111;m
+13;112;f;109;f
+14;107;m;114;m
