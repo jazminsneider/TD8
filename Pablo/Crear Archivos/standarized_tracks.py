@@ -20,7 +20,7 @@ def standardize(df, drop_above_percentile, mask):
 
 #---------------------------------------------------------------------------------------
 #carpeta a los csv's de audio
-folder='/csvs/output'
+folder='/csvs/features'
 token_features_list = []
 for track_fname in tqdm(sorted(glob.glob(os.path.join(folder, "*.csv")))):
     tracks_output_filename = track_fname.replace(".csv", "_standardized.csv")
@@ -48,6 +48,7 @@ def standardize(df, drop_above_percentile, mask):
     res = (df - mean) / stdev
     res.columns = [x + "_standardized" for x in df.columns]
     return res
+
 
 
 
