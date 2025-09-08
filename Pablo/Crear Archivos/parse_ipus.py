@@ -8,7 +8,8 @@ phonetic_dict_path = 'games-corpus/.uba-games/phonetic-dictionary-games.txt'
 tasks_csv = 'csvs/tasks_uba.csv'  # El CSV generado antes
 subjects_info_csv = 'csvs/subjects_info_uba.csv'  # Info de sujetos
 
-#LEER el dict
+
+#Leer el dict
 def read_list(fname):
     with open(fname, encoding='utf-8') as f:
         lines = [line.strip().split() for line in f if line.strip()]
@@ -18,9 +19,9 @@ phonemes_dictionary = read_list(phonetic_dict_path)
 words_phones_count = {}
 for row in phonemes_dictionary:
     if len(row) >= 2:
-        word = row[0]
+        word = row[1]
         try:
-            cuenta = len(row[0])
+            cuenta = len(row[2:])
         except ValueError:
             continue
         words_phones_count[word] = cuenta
@@ -92,7 +93,8 @@ for filename in phrases_files:
             words_count=words_in_phrase,
             phones_count=phones_in_phrase,
             words_by_second=words_by_sec,
-            phones_by_second=phones_by_sec
+            phones_by_second=phones_by_sec, 
+            wav=filename
         )
         ipus.append(row)
 
