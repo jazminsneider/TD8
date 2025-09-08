@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from helper import *
+import glob
 
 
 #función auxiliar que estandariza las pistas de audio
@@ -18,11 +19,11 @@ def standardize(df, drop_above_percentile, mask):
     return res
 
 #---------------------------------------------------------------------------------------
-
-tracks_list='lists/tracks.lst'
+#carpeta a los csv's de audio
+folder='/csvs/output'
 token_features_list = []
-for idx, track_fname in tqdm(read_list(tracks_list)):
-    tracks_output_filename = track_fname.replace('.csv', '_standardized.csv')
+for track_fname in tqdm(sorted(glob.glob(os.path.join(folder, "*.csv")))):
+    tracks_output_filename = track_fname.replace(".csv", "_standardized.csv")
 
     tracks = pd.read_csv(track_fname, index_col="time")
 
@@ -47,5 +48,6 @@ def standardize(df, drop_above_percentile, mask):
     res = (df - mean) / stdev
     res.columns = [x + "_standardized" for x in df.columns]
     return res
+
 
 
