@@ -59,8 +59,10 @@ for filename in phrases_files:
         words = phrase.split(" ")
         out_of_dict_words = [w for w in words if w not in words_phones_count]
         if dur == 0:
-            continue
+            helper.warning("Ignoring empty IPU")
+            continua
         if len(out_of_dict_words) > 0:
+            helper.info("missing words in dict {}".format(out_of_dict_words))
             phones_in_phrase = np.nan
         else:
             for w in words:
@@ -69,10 +71,10 @@ for filename in phrases_files:
         words_by_sec = round(words_in_phrase / dur, 4)
         phones_by_sec = round(phones_in_phrase / dur, 4)
         # Buscá la tarea correspondiente
-        task_found = session_tasks.loc[(session_tasks.t0 <= ipu_t0) & (ipu_t0 < session_tasks.tf)]
-        if len(task_found) == 0:
-            continue
-        task = task_found.iloc[0]
+        task_id = int(file_id.split(".")[2])
+        task_found = session_tasks.loc[(session_tasks.task_number == task_id)]
+        assert len(task_found) == 1
+        task = task_found.iloc[0]  
         row = dict(
             token_id=f"{file_id}.task.{task.task_number}.t0.{ipu_t0:.4f}.tf.{ipu_tf:.4f}",
             ipu_start_time=round(ipu_t0, 4),
