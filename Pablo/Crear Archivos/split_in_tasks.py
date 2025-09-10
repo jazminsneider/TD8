@@ -1,3 +1,9 @@
+import pandas as pd
+import logging
+import os
+from tqdm import tqdm
+import glob
+
 def debug(*msg):
     logger = logging.getLogger(__name__)
     logger.debug(" ".join([str(x) for x in msg]))
@@ -43,8 +49,15 @@ def save_list(lines, fname, verbose=True, separator="\t", append=False):
 tasks = pd.read_csv('csvs/tasks_uba.csv')
 tokens_list = []
 output_folder = "tasks_features"
-for sess_channel, track_fname in tqdm(read_list("CAMBIAR POR DIR DEL ARCHIVO")):
-        sess, channel = sess_channel.split("_")
+input_folder = "standardized"
+
+for track_fname in tqdm(sorted(glob.glob(os.path.join(input_folder, "*.csv")))):
+        base_name = os.path.basename(track_fname)  # ej: "1B_wavs_standardized.csv"
+        name_without_ext = os.path.splitext(base_name)[0]  # "1B_wavs_standardized"
+        # Extraemos session y channel
+        first_part = name_without_ext.split("_")[0]  # "1B"
+        sess = first_part[:-1]  
+        channel = first_part[-1]  
         tasks_for_session = tasks[tasks.session == int(sess)]
         if channel == "A":
             features_A = pd.read_csv(track_fname, index_col="time")
