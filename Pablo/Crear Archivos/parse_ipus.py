@@ -44,7 +44,9 @@ phrases_files = sorted(glob.glob(os.path.join(phrases_folder, '*.phrases')))
 
 for filename in phrases_files:
     file_id = os.path.basename(filename).split(".")[0]  # s01.objects.1
-    channel = "A"  # Adaptá si tenés info de canal
+    file_id = ".".join(os.path.basename(filename).split(".")[:-1])
+    assert("A" in file_id or "B" in file_id)
+    channel = "A" if "A" in file_id else "B"
     session = file_id[1:3]
     session_tasks = tasks[tasks.session == int(session)]
     speaker = speakers_info.loc[int(session), f"idSpeaker{channel}"]
