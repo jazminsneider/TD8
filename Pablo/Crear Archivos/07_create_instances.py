@@ -11,11 +11,11 @@ ipus_table= "/home/gallin/Documentos/pablo/realrealipus.csv"
 tt_table= "/home/gallin/Documentos/pablo/tt-table.csv"
 tasks_features_list= "/home/gallin/Documentos/pablo/lists/tasks_features.lst"
 tasks_table= "/home/gallin/Documentos/pablo/tasks_uba.csv"
-dev_output_folder="/home/gallin/Documentos/pablo/instances/dev/"
-dev_output_list="/home/gallin/Documentos/pablo/lists/dev_instances.lst"
-held_out_output_list="/home/gallin/Documentos/pablo/lists/held_out_instances.lst"
-held_out_output_folder="/home/gallin/Documentos/pablo/instances/held_out/"
-kind="overlap"
+dev_output_folder="/home/gallin/Documentos/pablo/instances/no_overlap/dev/"
+dev_output_list="/home/gallin/Documentos/pablo/lists/no_overlap/dev_instances.lst"
+held_out_output_list="/home/gallin/Documentos/pablo/lists/no_overlap/held_out_instances.lst"
+held_out_output_folder="/home/gallin/Documentos/pablo/instances/no_overlap/held_out/"
+kind="no_overlap" #se puede cambiar por overlap para crear ambas instancias.
 force=True
 
 def create_instances(tt_table, output_folder, tasks_features_list, tasks, ipus, instances_config, kind, force):
@@ -302,3 +302,4 @@ dev_list = create_instances(tt_table_dev_set, dev_output_folder, tasks_features_
 held_out_list = create_instances(tt_table_held_out_set, held_out_output_folder, tasks_features_list, tasks, ipus, instances_config, kind, force)
 helper.save_list(dev_list, dev_output_list)
 helper.save_list(held_out_list, held_out_output_list)
+
