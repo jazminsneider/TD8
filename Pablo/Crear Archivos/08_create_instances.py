@@ -1,26 +1,31 @@
 import os.path
 import pandas as pd
 import helper
-import configparser
 import numpy as np
 from tqdm import tqdm
-import glob
 
-#funciones auxiliares
-def create_instances(tt_table, output_folder, tasks_features_folder, tasks, ipus, instances_config, kind):
+
+
+
+ipus_table= "/home/gallin/Documentos/pablo/realrealipus.csv"
+tt_table= "/home/gallin/Documentos/pablo/tt-table.csv"
+tasks_features_list= "/home/gallin/Documentos/pablo/lists/tasks_features.lst"
+tasks_table= "/home/gallin/Documentos/pablo/tasks_uba.csv"
+dev_output_folder="/home/gallin/Documentos/pablo/instances/dev/"
+dev_output_list="/home/gallin/Documentos/pablo/lists/dev_instances.lst"
+held_out_output_list="/home/gallin/Documentos/pablo/lists/held_out_instances.lst"
+held_out_output_folder="/home/gallin/Documentos/pablo/instances/held_out/"
+kind="overlap"
+force=True
+
+def create_instances(tt_table, output_folder, tasks_features_list, tasks, ipus, instances_config, kind, force):
     tokens_list = []
 
-    for sess_task_feats in tqdm(sorted(glob.glob(os.path.join(tasks_features_folder, "*.csv")))):
-        base_name = os.path.basename(sess_task_feats)  
-       
-        name_without_ext = os.path.splitext(base_name)[0]
+    for sess_task, sess_task_feats in tqdm(helper.read_list(tasks_features_list)):
+        sess, task_id = sess_task.split("_")
 
-        
-        # Extraemos session y task
-        sess, task_id = name_without_ext.split("_") 
         turn_transitions_for_task = tt_table[(tt_table.session_number == int(sess)) & (tt_table.task == int(task_id))]
         ipus_for_task = ipus[(ipus.session_number == int(sess)) & (ipus.task == int(task_id))]
-        #asserts
         feats = pd.read_csv(sess_task_feats, index_col="time")
 
         task_t0, task_tf = feats.index.min(), feats.index.max()
@@ -33,44 +38,33 @@ def create_instances(tt_table, output_folder, tasks_features_folder, tasks, ipus
         # adjacent IPUs there is no speech from the interlocutor
 
         for idx, turn_transition in turn_transitions_for_task.iterrows():
-
-        
-
             tt_label = turn_transition.tt_label
-            #abemos que existe
             speaker_2_channel = turn_transition.speaker2
             speaker_1_channel = "B" if speaker_2_channel == "A" else "A"
 
             assert speaker_2_channel == "A" or speaker_2_channel == "B"
             assert speaker_2_channel != speaker_1_channel, f"{speaker_1_channel}, {speaker_2_channel}"
-            print(speaker_1_channel, speaker_2_channel)
-            #aca esta el error!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            print(ipus_for_task[(ipus_for_task.ipu_start_time >35)&(ipus_for_task.ipu_start_time <50)])
-
-            print("--------------------------------------------------------------")
 
             speaker_1_ipus = ipus_for_task[(ipus_for_task.channel == speaker_1_channel)]
             speaker_2_ipus = ipus_for_task[(ipus_for_task.channel == speaker_2_channel)]
-            print(speaker_1_ipus[(speaker_1_ipus.ipu_start_time >35)&(speaker_1_ipus.ipu_start_time <50)])
 
-            print("entre los dos!!! ------------------------------------------------------------------")
-            print(speaker_2_ipus[(speaker_2_ipus.ipu_start_time >35)&(speaker_2_ipus.ipu_start_time <50)])
             speaker_1_ipus.sort_values(by="ipu_start_time", inplace=True)
             speaker_2_ipus.sort_values(by="ipu_start_time", inplace=True)
 
             ipu2_t0 = turn_transition.ipu2_start_time
             ipu2_tf = turn_transition.ipu2_end_time
-            
+
             speaker_1_previous_ipus = speaker_1_ipus[(ipus_for_task.ipu_start_time < ipu2_t0)]
             speaker_2_next_ipus = speaker_2_ipus[(ipus_for_task.ipu_start_time >= ipu2_t0 - TIMEPOINTS_STEP)]
             # speaker_2_previous_ipus = speaker_2_ipus[(ipus_for_task.ipu_start_time < ipu2_t0)]
+
             if len(speaker_1_previous_ipus) == 0:
                 helper.warning("Ignoring instance {} (no previous IPUs) (t={}, sess={}, task={}, tt_label={})".format(idx, ipu2_t0, sess, task_id, tt_label))
                 continue
 
-            assert len(speaker_2_next_ipus) != 0, " MISSINGIPU {}(t={}, sess={}, task={}, tt_label={},IPU2_T0={})".format(idx, ipu2_t0, sess, task_id, tt_label,ipu2_t0)
+            assert len(speaker_2_next_ipus) != 0, "MISSING IPU2"
 
-            
+            # helper.info(f"TT_LABEL: {tt_label} IPU2_t0 = {ipu2_t0} ({sess_task})")
 
             speaker_1_prev_ipu = speaker_1_previous_ipus.tail(1).iloc[0]
             prev_ipu_tf = speaker_1_prev_ipu.ipu_end_time
@@ -105,7 +99,9 @@ def create_instances(tt_table, output_folder, tasks_features_folder, tasks, ipus
 
             tokens_list.append((idx, output_instance_metadata_fname))
 
-            
+            if not force and helper.exists(output_instance_metadata_fname):
+                helper.warning("{} already exist, skipping (use --force to overwrite)".format(output_instance_metadata_fname))
+                continue
 
             speaker_1_previous_turn_total_speech_time, speaker_1_previous_turn_ipus_count, speaker_1_previous_turn_duration = speaker_1_previous_turn_metrics(speaker_1_vad, speaker_2_vad, speaker_1_previous_ipus, prev_ipu_tf)
             speaker_2_next_turn_total_speech_time, speaker_2_next_turn_ipus_count, speaker_2_next_turn_duration = speaker_2_next_turn_metrics(speaker_1_vad, speaker_2_vad, speaker_2_next_ipus, next_ipu_t0)
@@ -157,7 +153,7 @@ def create_instances(tt_table, output_folder, tasks_features_folder, tasks, ipus
             instance_metadata = {}
             instance_metadata["tt_label"] = tt_label
             instance_metadata["transition_idx"] = idx
-            instance_metadata["wav_file"] = speaker_1_prev_ipu.wav_file
+            instance_metadata["wav_file"] = speaker_1_prev_ipu.wav
             instance_metadata["speaker_1_channel"] = speaker_1_prev_ipu.channel
             instance_metadata["temporal_features_fname"] = output_temporal_features_fname
             instance_metadata["static_features_fname"] = output_static_features_fname
@@ -169,8 +165,8 @@ def create_instances(tt_table, output_folder, tasks_features_folder, tasks, ipus
             instance_metadata = pd.DataFrame([instance_metadata])
             instance_metadata.to_csv(output_instance_metadata_fname, index=False)
 
-    tokens_list=[]
     return tokens_list
+
 
 def consistent_vads(speaker_1_vad, speaker_2_vad, prev_ipu_tf, next_ipu_t0, kind):
     valid = True
@@ -230,6 +226,7 @@ def fixed_window_tracks(from_t, to_t, instances_config, feats):
 
     return instance
 
+
 def speaker_1_previous_turn_metrics(speaker_1_vad, speaker_2_vad, speaker_1_previous_ipus, prev_ipu_tf):
     speaker_1_prev_vad = speaker_1_vad[:prev_ipu_tf]
     speaker_2_prev_vad = speaker_2_vad[:prev_ipu_tf]
@@ -265,25 +262,9 @@ def speaker_2_next_turn_metrics(speaker_1_vad, speaker_2_vad, speaker_2_next_ipu
 
     return speaker_2_next_turn_total_speech_time, speaker_2_next_turn_ipus_count, speaker_2_next_turn_duration
 
-#----------------------------------------------------------------------------------
 
-#acá empieza la funcion real
-TIMEPOINTS_STEP = 0.01
+#-----------------------------------------------------------------------------------------------------------funciones auxiliares ------------------------------
 
-path_actual=os.path.abspath(__file__)
-ipus_table=os.path.join(os.path.dirname(path_actual),'ipus_uba.csv')
-tt_table=os.path.join(os.path.dirname(path_actual),'tt-table.csv')
-tasks_table=os.path.join(os.path.dirname(path_actual),'tasks_uba.csv')
-task_features_folder=os.path.join(os.path.dirname(path_actual),'tasks_features/')
-dev_output_folder=os.path.join(os.path.dirname(path_actual),'instances/dev/')
-held_out_output_folder=os.path.join(os.path.dirname(path_actual),'instances/held_out/')
-dev_output_list=os.path.join(os.path.dirname(path_actual),'dev_instances.lst')
-held_out_output_list=os.path.join(os.path.dirname(path_actual),'held_out_instances.lst')
-#----------------------------------------------------------------------------------
-kind= "overlap" #podes alternar con no_overlap
-
-
-"""
 helper.mkdir_p(os.path.dirname(dev_output_list))
 helper.mkdir_p(os.path.dirname(held_out_output_list))
 dev_output_folder = os.path.abspath(dev_output_folder)
@@ -291,11 +272,11 @@ held_out_output_folder = os.path.abspath(held_out_output_folder)
 
 helper.mkdir_p(dev_output_folder)
 helper.mkdir_p(held_out_output_folder)
-"""
+
 ipus = pd.read_csv(ipus_table, index_col="token_id")
 tasks = pd.read_csv(tasks_table)
 
-
+TIMEPOINTS_STEP = 0.01
 
 allowed_tt_labels = {"BC","BC_O", "S", "O", "PI", "I", "X2", "X2_O", "BI"}
 held_out_tasks_config = {"s1t13" ,"s1t14", "s2t13", "s2t14", "s3t13", "s3t14", "s4t13", "s4t14", "s5t13", "s5t14", "s6t13", "s6t14", "s7t13", "s7t14", "s8t13", "s8t14", "s9t13", "s9t14", "s10t13", "s10t14", "s11t13", "s11t14", "s12t13", "s12t14", "s13t13", "s13t14", "s14t13", "s14t14"}
@@ -308,7 +289,6 @@ tt_table_df = tt_table_df[tt_table_df.tt_label.isin(allowed_tt_labels)]
 
 if kind == "overlap":
     tt_table_df = tt_table_df[tt_table_df.overlapped_transition]
-    
 else:
     tt_table_df = tt_table_df[~tt_table_df.overlapped_transition]
 
@@ -317,14 +297,8 @@ tt_table_held_out_set = tt_table_df[tt_table_df.apply(lambda x: (x['session_numb
 
 instances_config = {"seconds_before": 1, "seconds_after": 1}
 
-dev_list = create_instances(tt_table_dev_set, dev_output_folder, task_features_folder, tasks, ipus, instances_config, kind)
-held_out_list = create_instances(tt_table_held_out_set, held_out_output_folder, task_features_folder, tasks, ipus, instances_config, kind)
-#helper.save_list(dev_list, dev_output_list)
-#helper.save_list(held_out_list, held_out_output_list)
 
-#---------------------------------------------------------------------------------------
-
-
-
-
-
+dev_list = create_instances(tt_table_dev_set, dev_output_folder, tasks_features_list, tasks, ipus, instances_config, kind, force)
+held_out_list = create_instances(tt_table_held_out_set, held_out_output_folder, tasks_features_list, tasks, ipus, instances_config, kind, force)
+helper.save_list(dev_list, dev_output_list)
+helper.save_list(held_out_list, held_out_output_list)
