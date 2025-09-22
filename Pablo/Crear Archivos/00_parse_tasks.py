@@ -4,9 +4,15 @@ import os
 
 # Ruta a la carpeta uba-tasks
 uba_folder = 'games-corpus/.uba-games/b1-dialogue-tasks'
+uba_folder2='games-corpus/.uba-games/b2-dialogue-tasks'
 
 # Busca todos los archivos .tasks
 tasks_files = sorted(glob.glob(os.path.join(uba_folder, 's*.tasks')))
+task_files2=sorted(glob.glob(os.path.join(uba_folder, 's*.tasks')))
+
+for task_file in task_files2:
+    task_files.append(task_file)
+
 
 def read_list(fname):
     with open(fname, encoding='utf-8') as f:
