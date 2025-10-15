@@ -16,8 +16,6 @@ from collections import Counter
 import sklearn.metrics
 
 
-np.random.seed(1234)
-
 def get_class_weights(y):
     counter = Counter(y)
     majority = max(counter.values())
@@ -52,8 +50,8 @@ N_ESTIMATORS = 300
 MAX_DEPTH = 10
 MAX_FEATURES = 0.5
 
-output_fname = "cross_val_resultados_no_overlap"
-data_folder = "/home/gallin/Documentos/pablo/output/X_y/no_overlap_dev"
+output_fname = "cross_val_resultados_no_overlap_real.csv"
+data_folder = "output/X_y/overlap_dev"
 balance_method = "oversample"
 
 
@@ -61,9 +59,17 @@ X = pd.read_csv(os.path.join(data_folder, "X.csv"), index_col=0)
 
 X = X.fillna(FILL_NA_WITH).values.astype(np.float32)
 y_true = pd.read_csv(os.path.join(data_folder, "y.csv"), index_col=0)
-sessions = pd.read_csv(os.path.join(data_folder, "sessions.csv"), index_col=0).values.squeeze()
-    # tasks = pd.read_csv(os.path.join(data_folder, "tasks.csv"), index_col=0).values.squeeze()
+sessions= pd.read_csv(os.path.join(data_folder, "sessions.csv"), index_col=0).values.squeeze()
 
+ 
+labels_keep = ["BC_O", "BI", "I", "O", "X2_O"]
+#labels_keep = ["PI", "BC", "S", "X2"] #Para no overlap
+mask = y_true.isin(labels_keep).values.flatten()
+
+X = X[mask]               # filtra X
+y_true = y_true[mask]            # filtra y_true
+sessions = sessions[mask] # filtra sesiones
+print(f"Quedaron {len(y_true)} ejemplos con las etiquetas {y_true.value_counts()}")
 
 le = preprocessing.LabelEncoder()
 y = le.fit_transform(y_true.values.squeeze())
@@ -107,6 +113,7 @@ for (train_positions, val_positions) in tqdm(group_cross_val.split(X, y, groups=
             combined_y_true.extend(y_val)
             train_sizes.append(len(y_train))
 
+
 f1 = sklearn.metrics.f1_score(y_true=combined_y_true, y_pred=combined_y_pred, average="macro")
 helper.info(f1)
 res_i["f1_macro (global)"] = f1
@@ -135,3 +142,14 @@ plt.title("Matriz de confusión - Random Forest")
 plt.tight_layout()
 plt.show()
 
+# 🔹 Calcular F1-score por clase usando todas las predicciones acumuladas
+f1_per_class = sklearn.metrics.f1_score(
+    y_true=combined_y_true,
+    y_pred=combined_y_pred,
+    average=None,
+    labels=np.arange(len(le.classes_))
+)
+
+print("\nF1-score por clase:")
+for label, f1_val in zip(le.classes_, f1_per_class):
+    print(f"  {label}: {f1_val:.4f}")
