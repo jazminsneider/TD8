@@ -3,11 +3,11 @@ import helper
 from tqdm import tqdm
 import os.path
 
-z_scored_tracks_list="/home/gallin/Documentos/pablo/lists/z_scored_tracks.lst"
-tasks_table="/home/gallin/Documentos/pablo/tasks_uba.csv"
-output_list="/home/gallin/Documentos/pablo/lists/tasks_features.lst"
-output_folder="/home/gallin/Documentos/pablo/output/tasks_features/"
-force=False
+z_scored_tracks_list="lists/z_scored_tracks.lst"
+tasks_table="csvs/tasks_uba.csv"
+output_list="lists/tasks_features.lst"
+output_folder="tasks_features/"
+force=True  
 
 
 
