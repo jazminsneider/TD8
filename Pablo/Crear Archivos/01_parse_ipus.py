@@ -2,9 +2,10 @@ import pandas as pd
 import numpy as np
 import glob
 import os
+import helper  # Asumiendo que helper.py está en el mismo directorio
 
 phrases_folder = 'games-corpus/.uba-games/b1-dialogue-phrases'  # Carpeta con los .phrases
-phonetic_dict_path = 'games-corpus/.uba-games/phonetic-dictionary-games.txt'
+phonetic_dict_path = 'games-corpus/.uba-games/phonetic-dict-uba.txt'
 tasks_csv = 'csvs/tasks_uba.csv'  # El CSV generado antes
 subjects_info_csv = 'csvs/subjects_info_uba.csv'  # Info de sujetos
 
@@ -19,17 +20,17 @@ phonemes_dictionary = read_list(phonetic_dict_path)
 words_phones_count = {}
 for row in phonemes_dictionary:
     if len(row) >= 2:
+        #print(row[2:])
         word = row[1]
         try:
             cuenta = len(row[2:])
         except ValueError:
             continue
         words_phones_count[word] = cuenta
+
 #leemos los archivos auxiliares
 tasks = pd.read_csv(tasks_csv)
 speakers_info = pd.read_csv(subjects_info_csv,sep=";", index_col="sessionID")
-
-
 
 #procesas phrases
 def read_wavesurfer(fname):
@@ -41,7 +42,7 @@ def read_wavesurfer(fname):
 silence_tag = "#"
 ipus = []
 phrases_files = sorted(glob.glob(os.path.join(phrases_folder, '*.phrases')))
-
+contador = 0
 for filename in phrases_files:
     file_id = os.path.basename(filename).split(".")[0]  # s01.objects.1
     file_id = ".".join(os.path.basename(filename).split(".")[:-1])
@@ -59,10 +60,10 @@ for filename in phrases_files:
         words = phrase.split(" ")
         out_of_dict_words = [w for w in words if w not in words_phones_count]
         if dur == 0:
-            helper.warning("Ignoring empty IPU")
-            continua
+            #helper.warning("Ignoring empty IPU")
+            continue
         if len(out_of_dict_words) > 0:
-            helper.info("missing words in dict {}".format(out_of_dict_words))
+            #elper.info("missing words in dict {}".format(out_of_dict_words))
             phones_in_phrase = np.nan
         else:
             for w in words:
@@ -70,8 +71,18 @@ for filename in phrases_files:
                 words_in_phrase += 1
         words_by_sec = round(words_in_phrase / dur, 4)
         phones_by_sec = round(phones_in_phrase / dur, 4)
-        # Buscá la tarea correspondiente
-        task_id = int(file_id.split(".")[2])
+
+        # Buscá la tarea correspondiente 
+        filtered = session_tasks[(session_tasks.t0 <= ipu_t0) & 
+                                (session_tasks.tf >= ipu_tf)]
+
+        if filtered.empty:
+            #helper.warning(f"Ignoring IPU outside tasks (t={ipu_t0}, sess={session}, channel={channel})")
+            contador += 1
+            continue
+
+        task_id = int(filtered.task_number.iloc[0])
+
         task_found = session_tasks.loc[(session_tasks.task_number == task_id)]
         assert len(task_found) == 1
         task = task_found.iloc[0]  
@@ -101,6 +112,7 @@ for filename in phrases_files:
             wav=filename
         )
         ipus.append(row)
+    print(f"Ignored {contador} IPUs outside tasks")
 
 #guardamos en un nuevo .csv
 df = pd.DataFrame(ipus)
