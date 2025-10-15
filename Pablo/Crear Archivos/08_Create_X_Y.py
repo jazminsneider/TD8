@@ -32,15 +32,15 @@ import configparser
 import helper
 from p_tqdm import p_map
 
-types="overlap"  # "overlap" o "no_overlap"
+types="no_overlap"  # "overlap" o "no_overlap"
 force=False
 
 if types=="overlap":
-    instances_list="/home/gallin/Documentos/pablo/lists/overlap/held_out_instances.lst"
-    output_folder = Path("/home/gallin/Documentos/pablo/output/X_y/overlap_held")
+    instances_list="lists/overlap/held_out_instances.lst"
+    output_folder = Path("output/X_y/overlap_held_out")
 else:
-     instances_list="/home/gallin/Documentos/pablo/lists/no_overlap/dev_instances.lst"
-     output_folder = Path("/home/gallin/Documentos/pablo/output/X_y/no_overlap_dev")
+     instances_list="lists/no_overlap/held_out_instances.lst"
+     output_folder = Path("output/X_y/no_overlap_held_out")
 
 helper.mkdir_p(output_folder)
 
